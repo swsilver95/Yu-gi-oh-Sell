@@ -1,0 +1,120 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environment
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# Django
+*.pot
+*.pyc
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+/media
+/staticfiles
+logs/
+*.pid
+*.seed
+*.pid.lock
+
+# Django - 환경 변수 파일
+.env
+.env.local
+.env.*.local
+/etc/dbweb/db.env
+
+# Vue.js / Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+# Vue.js 빌드 결과물
+frontend/dist/
+frontend/.vite/
+frontend/.vite-cache/
+frontend/dist-ssr/
+frontend/*.local
+
+# Vue.js 테스트
+frontend/coverage/
+frontend/.nyc_output/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# 임시 파일
+*.tmp
+*.temp
+*.bak
+*.backup
+*.old
+*.orig
+
+# 스크래핑 데이터 (선택사항 - 필요시 주석 해제)
+# scripts/scraping/yugioh_card_names.dat
+
+# 마이그레이션 파일 (선택사항 - 필요시 주석 해제)
+# cards/migrations/*.py
+# !cards/migrations/__init__.py
+
+# 로그 파일 (위에서 이미 정의됨)
+
+# 데이터베이스 덤프
+*.sql
+*.dump
+
+# 압축 파일
+*.zip
+*.tar
+*.tar.gz
+*.rar
+
+# 설정 파일 (민감한 정보 포함)
+# /etc/dbweb/db.env (절대 경로는 Git에서 무시되지 않으므로 주석 처리)
+
