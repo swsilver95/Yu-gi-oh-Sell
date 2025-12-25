@@ -7,12 +7,16 @@
 - `scraping/`: 유희왕 카드명 스크래핑 관련 스크립트
 - `create_admin.sh`: Django 관리자 계정 생성
 - `optimize_existing_images.py`: 기존 카드 이미지 최적화
+- `apply_subdomain.sh`: 서브도메인 설정 적용 (yugioh.silbuntu.mooo.com)
+- `rollback_subdomain.sh`: 서브도메인 설정 롤백
+- `apply_and_restart.sh`: 서브도메인 설정 적용 및 서비스 재시작
 
 ## 사용 방법
 
 ### 관리자 계정 생성
 ```bash
-./scripts/create_admin.sh
+cd /srv/dbweb
+sudo ./scripts/create_admin.sh
 ```
 
 ### 기존 이미지 최적화
@@ -20,6 +24,24 @@
 cd /srv/dbweb
 source venv/bin/activate
 python scripts/optimize_existing_images.py
+```
+
+### 서브도메인 설정 적용
+```bash
+cd /srv/dbweb
+sudo ./scripts/apply_subdomain.sh
+```
+
+### 서브도메인 설정 롤백
+```bash
+cd /srv/dbweb
+sudo ./scripts/rollback_subdomain.sh
+```
+
+### 서브도메인 설정 적용 및 서비스 재시작
+```bash
+cd /srv/dbweb
+sudo ./scripts/apply_and_restart.sh
 ```
 
 ### 카드명 스크래핑
