@@ -1,7 +1,15 @@
 <template>
   <div class="card-upload-container">
-    <h2 class="form-title">카드 등록</h2>
-    <form @submit.prevent="handleSubmit" class="upload-form">
+    <div class="form-header" @click="toggleFold">
+      <h2 class="form-title">카드 등록</h2>
+      <button type="button" class="fold-button" :class="{ 'folded': isFolded }">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline v-if="isFolded" points="6 9 12 15 18 9"></polyline>
+          <polyline v-else points="18 15 12 9 6 15"></polyline>
+        </svg>
+      </button>
+    </div>
+    <form v-show="!isFolded" @submit.prevent="handleSubmit" class="upload-form">
       <div class="form-group">
         <label for="name">카드명</label>
         <div class="autocomplete-wrapper">
@@ -44,15 +52,40 @@
 
       <div class="form-group">
         <label for="image">카드 이미지</label>
-        <input
-          id="image"
-          type="file"
-          accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
-          @change="handleImageChange"
-          required
-        />
-        <div v-if="imagePreview" class="image-preview">
-          <img :src="imagePreview" alt="미리보기" />
+        <div
+          class="drop-zone"
+          :class="{ 'drag-over': isDragOver, 'has-image': imagePreview }"
+          @drop="handleDrop"
+          @dragover.prevent="handleDragOver"
+          @dragenter.prevent="handleDragEnter"
+          @dragleave.prevent="handleDragLeave"
+        >
+          <input
+            id="image"
+            type="file"
+            accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+            @change="handleImageChange"
+            required
+            ref="fileInput"
+          />
+          <div v-if="!imagePreview" class="drop-zone-content">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="17 8 12 3 7 8"></polyline>
+              <line x1="12" y1="3" x2="12" y2="15"></line>
+            </svg>
+            <p class="drop-zone-text">이미지를 드래그 앤 드롭하거나 클릭하여 선택</p>
+            <p class="drop-zone-hint">JPG, PNG, GIF, WEBP (최대 20MB)</p>
+          </div>
+          <div v-else class="image-preview">
+            <img :src="imagePreview" alt="미리보기" />
+            <button type="button" @click="removeImage" class="remove-image-btn" title="이미지 제거">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -133,6 +166,9 @@ const autocompleteResults = ref([])
 const showAutocomplete = ref(false)
 const highlightedIndex = ref(-1)
 const allCardNames = ref([]) // 모든 카드명 목록 (클라이언트 사이드 검색용)
+const isDragOver = ref(false)
+const isFolded = ref(false)
+const fileInput = ref(null)
 let autocompleteTimeout = null
 
 // 페이지 진입 시 모든 카드명 로드
@@ -146,26 +182,23 @@ onMounted(async () => {
   }
 })
 
-const handleImageChange = (event) => {
-  const file = event.target.files[0]
+const validateAndSetImage = (file) => {
   if (!file) {
-    return
+    return false
   }
   
   // 파일 크기 검증 (20MB 제한)
   const maxSize = 20 * 1024 * 1024 // 20MB
   if (file.size > maxSize) {
     alert('이미지 파일 크기는 20MB 이하여야 합니다.')
-    event.target.value = '' // 파일 선택 초기화
-    return
+    return false
   }
   
   // 파일 타입 검증
   const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp']
   if (!allowedTypes.includes(file.type)) {
     alert('허용된 이미지 형식: JPG, PNG, GIF, WEBP')
-    event.target.value = '' // 파일 선택 초기화
-    return
+    return false
   }
   
   // 파일 확장자 검증
@@ -173,8 +206,7 @@ const handleImageChange = (event) => {
   const fileExt = '.' + file.name.split('.').pop().toLowerCase()
   if (!allowedExtensions.includes(fileExt)) {
     alert('허용된 이미지 형식: JPG, PNG, GIF, WEBP')
-    event.target.value = '' // 파일 선택 초기화
-    return
+    return false
   }
   
   imageFile.value = file
@@ -183,6 +215,58 @@ const handleImageChange = (event) => {
     imagePreview.value = e.target.result
   }
   reader.readAsDataURL(file)
+  return true
+}
+
+const handleImageChange = (event) => {
+  const file = event.target.files[0]
+  if (file) {
+    validateAndSetImage(file)
+  }
+}
+
+const handleDragEnter = (event) => {
+  event.preventDefault()
+  isDragOver.value = true
+}
+
+const handleDragOver = (event) => {
+  event.preventDefault()
+  isDragOver.value = true
+}
+
+const handleDragLeave = (event) => {
+  event.preventDefault()
+  isDragOver.value = false
+}
+
+const handleDrop = (event) => {
+  event.preventDefault()
+  isDragOver.value = false
+  
+  const files = event.dataTransfer.files
+  if (files.length > 0) {
+    const file = files[0]
+    validateAndSetImage(file)
+    // 파일 입력 요소도 업데이트
+    if (fileInput.value) {
+      const dataTransfer = new DataTransfer()
+      dataTransfer.items.add(file)
+      fileInput.value.files = dataTransfer.files
+    }
+  }
+}
+
+const removeImage = () => {
+  imageFile.value = null
+  imagePreview.value = null
+  if (fileInput.value) {
+    fileInput.value.value = ''
+  }
+}
+
+const toggleFold = () => {
+  isFolded.value = !isFolded.value
 }
 
 const handleSubmit = async () => {
@@ -350,6 +434,9 @@ const resetForm = () => {
   }
   imageFile.value = null
   imagePreview.value = null
+  if (fileInput.value) {
+    fileInput.value.value = ''
+  }
 }
 </script>
 
@@ -358,12 +445,42 @@ const resetForm = () => {
   width: 100%;
 }
 
+.form-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-lg);
+  cursor: pointer;
+  user-select: none;
+}
+
 .form-title {
   font-size: 24px;
   font-weight: 700;
   color: var(--text-primary);
-  margin-bottom: var(--spacing-lg);
+  margin: 0;
   letter-spacing: -0.5px;
+}
+
+.fold-button {
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  cursor: pointer;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  transition: all 0.2s ease;
+}
+
+.fold-button:hover {
+  background: var(--bg-secondary);
+}
+
+.fold-button.folded {
+  transform: rotate(180deg);
 }
 
 .upload-form {
@@ -494,9 +611,80 @@ const resetForm = () => {
   box-shadow: var(--shadow-sm);
 }
 
+.drop-zone {
+  position: relative;
+  border: 2px dashed var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: var(--spacing-lg);
+  text-align: center;
+  transition: all 0.3s ease;
+  background: var(--bg-secondary);
+  cursor: pointer;
+  min-height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.drop-zone:hover {
+  border-color: var(--primary-color);
+  background: rgba(102, 126, 234, 0.05);
+}
+
+.drop-zone.drag-over {
+  border-color: var(--primary-color);
+  background: rgba(102, 126, 234, 0.1);
+  border-style: solid;
+}
+
+.drop-zone.has-image {
+  padding: 0;
+  border: none;
+  min-height: auto;
+}
+
+.drop-zone input[type="file"] {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  opacity: 0;
+  cursor: pointer;
+  z-index: 1;
+}
+
+.drop-zone-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-sm);
+  color: var(--text-secondary);
+  pointer-events: none;
+}
+
+.drop-zone-content svg {
+  color: var(--text-secondary);
+}
+
+.drop-zone-text {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.drop-zone-hint {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
 .image-preview {
-  margin-top: var(--spacing-xs);
+  position: relative;
+  width: 100%;
   max-width: 300px;
+  margin: 0 auto;
   border-radius: var(--radius-sm);
   overflow: hidden;
   border: 2px solid var(--border-color);
@@ -507,6 +695,29 @@ const resetForm = () => {
   width: 100%;
   height: auto;
   display: block;
+}
+
+.remove-image-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: rgba(0, 0, 0, 0.7);
+  border: none;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: white;
+  transition: all 0.2s ease;
+  z-index: 2;
+}
+
+.remove-image-btn:hover {
+  background: rgba(220, 53, 69, 0.9);
+  transform: scale(1.1);
 }
 
 .form-actions {

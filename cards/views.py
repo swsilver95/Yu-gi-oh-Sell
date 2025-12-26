@@ -18,10 +18,10 @@ class CardViewSet(viewsets.ModelViewSet):
     
     def get_permissions(self):
         """
-        카드 생성(등록), 수정, 삭제, 판매 상태 변경은 admin만 가능
-        조회는 모두 가능
+        카드 생성(등록), 수정, 삭제, 판매 상태 변경, 카드명 목록 조회는 admin만 가능
+        일반 카드 조회는 모두 가능
         """
-        if self.action in ['create', 'update', 'partial_update', 'destroy', 'mark_as_sold', 'mark_as_available', 'mark_as_reserved', 'check_auth']:
+        if self.action in ['create', 'update', 'partial_update', 'destroy', 'mark_as_sold', 'mark_as_available', 'mark_as_reserved', 'check_auth', 'get_all_card_names']:
             permission_classes = [IsAdminUser]
         else:
             permission_classes = [AllowAny]
@@ -84,46 +84,24 @@ class CardViewSet(viewsets.ModelViewSet):
             'count': len(results)
         })
     
-    @action(detail=False, methods=['get'])
+    @action(detail=False, methods=['get'], permission_classes=[IsAdminUser])
     def get_all_card_names(self, request):
-        """모든 카드명 목록 반환 (프론트엔드에서 클라이언트 사이드 검색용)"""
-        # 보안: 접근 제어 및 Rate limiting
+        """모든 카드명 목록 반환 (관리자 전용 - 프론트엔드에서 클라이언트 사이드 검색용)"""
+        # 관리자 전용이므로 Rate limiting은 간소화 (관리자 사용이므로 제한 완화)
         client_ip = self._get_client_ip(request)
-        referer = request.META.get('HTTP_REFERER', '')
-        user_agent = request.META.get('HTTP_USER_AGENT', '')
         
-        # Rate limiting: IP당 1분에 최대 10회 요청 허용
+        # Rate limiting: 관리자이므로 IP당 1분에 최대 30회 요청 허용 (관리자 사용 고려)
         cache_key = f'card_names_rate_limit_{client_ip}'
         request_count = cache.get(cache_key, 0)
         
-        if request_count >= 10:
+        if request_count >= 30:
             logger.warning(
-                f'Rate limit exceeded for get_all_card_names: IP={client_ip}, '
-                f'Referer={referer}, User-Agent={user_agent[:100]}'
+                f'Rate limit exceeded for get_all_card_names (admin): IP={client_ip}, '
+                f'User={request.user.username if request.user.is_authenticated else "unknown"}'
             )
             return Response(
                 {'error': '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.'},
                 status=status.HTTP_429_TOO_MANY_REQUESTS
-            )
-        
-        # Referer 체크: 같은 도메인에서만 접근 허용 (선택적)
-        # 프론트엔드에서 사용하므로 완전히 차단하지 않음
-        allowed_hosts = getattr(settings, 'ALLOWED_HOSTS', [])
-        is_same_origin = False
-        if referer:
-            from urllib.parse import urlparse
-            referer_host = urlparse(referer).netloc
-            for host in allowed_hosts:
-                if host in referer_host or referer_host in host:
-                    is_same_origin = True
-                    break
-        
-        # 접근 로깅 (의심스러운 접근만)
-        if not is_same_origin or not user_agent or 'bot' in user_agent.lower() or 'crawler' in user_agent.lower():
-            logger.info(
-                f'get_all_card_names access: IP={client_ip}, '
-                f'Referer={referer}, User-Agent={user_agent[:100]}, '
-                f'Same-Origin={is_same_origin}'
             )
         
         # Rate limit 카운터 증가 (1분 TTL)
