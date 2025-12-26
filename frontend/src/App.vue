@@ -60,14 +60,20 @@ const checkAuth = async () => {
     return
   }
   
-  // 관리자 권한이 필요한 엔드포인트로 인증 확인
-  // 실제로 카드 생성 권한이 있는지 확인하기 위해 OPTIONS 요청 사용
+  // 관리자 인증 확인 전용 엔드포인트로 확인
   try {
-    await api.options('/api/cards/')
-    // 성공하면 인증된 것으로 간주
-    isAuthenticated.value = true
+    const response = await api.get('/api/cards/check_auth/')
+    // 인증 성공 및 관리자 권한 확인
+    if (response.data && response.data.authenticated && response.data.is_admin) {
+      isAuthenticated.value = true
+    } else {
+      // 인증은 되었지만 관리자가 아닌 경우
+      isAuthenticated.value = false
+      delete api.defaults.headers.common['Authorization']
+      localStorage.removeItem('auth_token')
+    }
   } catch (error) {
-    // 에러가 발생하면 인증되지 않은 것으로 간주
+    // 인증 실패 (401, 403 등)
     isAuthenticated.value = false
     // Authorization 헤더 제거
     delete api.defaults.headers.common['Authorization']

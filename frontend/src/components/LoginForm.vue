@@ -51,17 +51,33 @@ const handleLogin = async () => {
     const authHeader = `Basic ${auth}`
     api.defaults.headers.common['Authorization'] = authHeader
     
-    // localStorage에 인증 정보 저장
-    localStorage.setItem('auth_token', authHeader)
-    
+    // 실제 인증 확인: 관리자 전용 엔드포인트로 확인
     try {
-      await api.options('/api/cards/')
-      emit('login-success')
-    } catch (testErr) {
-      emit('login-success')
+      const response = await api.get('/api/cards/check_auth/')
+      // 인증 성공 시에만 localStorage에 저장하고 성공 이벤트 emit
+      if (response.data && response.data.authenticated && response.data.is_admin) {
+        localStorage.setItem('auth_token', authHeader)
+        emit('login-success')
+      } else {
+        // 인증은 되었지만 관리자가 아닌 경우
+        error.value = '관리자 권한이 없습니다.'
+        delete api.defaults.headers.common['Authorization']
+        localStorage.removeItem('auth_token')
+      }
+    } catch (authErr) {
+      // 인증 실패 (401, 403 등)
+      const status = authErr.response?.status
+      if (status === 401 || status === 403) {
+        error.value = '로그인에 실패했습니다. 사용자명과 비밀번호를 확인해주세요.'
+      } else {
+        error.value = '인증 확인 중 오류가 발생했습니다.'
+      }
+      console.error('Authentication error:', authErr)
+      delete api.defaults.headers.common['Authorization']
+      localStorage.removeItem('auth_token')
     }
   } catch (err) {
-    error.value = '로그인에 실패했습니다. 사용자명과 비밀번호를 확인해주세요.'
+    error.value = '로그인 처리 중 오류가 발생했습니다.'
     console.error('Login error:', err)
     delete api.defaults.headers.common['Authorization']
     localStorage.removeItem('auth_token')
